@@ -33,7 +33,7 @@ savemat('moons_with_noise.mat', {'data': data, 'labels': labels})
 """
 Gaussian blobs with noise features and random noise
 """
-data, labels = make_classification(n_samples=1000, n_classes=4, n_clusters_per_class=1, weights=[0.02, 0.18, 0.35, 0.5], n_features=20, shuffle=False, class_sep=3, random_state=5)
+data, labels = make_classification(n_samples=1000, n_classes=4, n_clusters_per_class=1, weights=[0.02, 0.18, 0.3, 0.5], n_features=20, shuffle=False, class_sep=3, random_state=5)
 
 data = np.vstack((data, 5 * np.random.standard_normal(size=(50, 20))))
 labels = np.concatenate([labels, -1 * np.ones(50)])
