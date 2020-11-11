@@ -132,11 +132,11 @@ classdef RnnDbscan < handle
                     % k-nearest neighbors of a point j are the successors of 
                     % node j in the knn graph, i.e. there is an edge originating
                     % from node j 
-                    corePointNeighbors = obj.KnnGraph.successors(obj.Clusters{i}(j));
+                    neighbors = obj.KnnGraph.successors(obj.Clusters{i}(j));
 
                     % only add points to a cluster if they do not already belong
                     % to a cluster
-                    unclusteredPoints = corePointNeighbors(obj.Labels(corePointNeighbors) == 0);
+                    unclusteredPoints = neighbors(obj.Labels(neighbors) == 0);
 
                     % points in a cluster are likely to share neighbors, but we 
                     % don't want these neighbors to be added to the cluster
@@ -170,6 +170,8 @@ classdef RnnDbscan < handle
             unclusteredPoints = setdiff(pointIndices, clusteredPoints);
 
             for unclusteredPoint = unclusteredPoints
+                pointIsNoise = true;
+
                 % find k-nearest neighbors of the unclustered point
                 neighbors = obj.KnnGraph.successors(unclusteredPoint);
 
@@ -191,13 +193,17 @@ classdef RnnDbscan < handle
                         if distances(i) <= obj.ClusterDensities(clusterIdx)
                             % add unclustered point to cluster
                             obj.Clusters{clusterIdx} = horzcat(obj.Clusters{clusterIdx}, unclusteredPoint); 
+                            obj.Labels(unclusteredPoint) = clusterIdx;
+
+                            pointIsNoise = false;
 
                             % point can't be assigned to more than one cluster, 
                             % so stop once it is assigned
-                           break;
+                            break;
                         end
                     end
-                else
+                end
+                if pointIsNoise
                     % the unclustered point does not have any neighbors that are core points, so it is considered an outlier
                     obj.Outliers = horzcat(obj.Outliers, unclusteredPoint);
                     obj.Labels(unclusteredPoint) = -1;
@@ -228,25 +234,32 @@ classdef RnnDbscan < handle
                 subgraph = obj.KnnGraph.subgraph(clusterCorePoints);
                 [sourceNodes, targetNodes] = subgraph.findedge();
 
-                % since the subgraph renumbers the node IDs, we convert back to
-                % the original node IDs so we can properly index into the data
-                % matrix. The subgraph's node IDs are the indices of the vector
-                % (clusterCorePoints) used to create the subgraph
-                sourceNodes = clusterCorePoints(sourceNodes);
-                targetNodes = clusterCorePoints(targetNodes);
+                % If a cluster only has one core point, we can't compute it's
+                % density; consequently, we must check if there is an edge in
+                % the cluster before trying to compute it's density
+                if sourceNodes & targetNodes
+                    % since the subgraph renumbers the node IDs, we convert back
+                    % to the original node IDs so we can properly index into the
+                    % data matrix. The subgraph's node IDs are the indices of
+                    % the vector (clusterCorePoints) used to create the subgraph
+                    sourceNodes = clusterCorePoints(sourceNodes);
+                    targetNodes = clusterCorePoints(targetNodes);
 
-                % get the data instances for the source and target nodes of 
-                % each edge
-                sourcePoints = obj.Data(sourceNodes, :);
-                targetPoints = obj.Data(targetNodes, :);
+                    % get the data instances corresponding to the source and
+                    % target nodes of each edge
+                    sourcePoints = obj.Data(sourceNodes, :);
+                    targetPoints = obj.Data(targetNodes, :);
 
-                % compute the euclidean distance between all pairs of core 
-                % points that have edges between them; since observations are 
-                % in rows, the third argument (DIM) of vecnorm is set to 2 to
-                % compute the norm along rows, not columns 
-                distances = vecnorm(sourcePoints - targetPoints, 2, 2);
+                    % compute the euclidean distance between all pairs of core
+                    % points that have edges between them; since observations
+                    % are in rows, the third argument (DIM) of vecnorm is set to
+                    % 2 to compute the norm along rows, not columns
+                    distances = vecnorm(sourcePoints - targetPoints, 2, 2);
 
-                obj.ClusterDensities(i) = max(distances);
+                    obj.ClusterDensities(i) = max(distances);
+                else
+                    obj.ClusterDensities(i) = nan;
+                end
             end
         end
     end
