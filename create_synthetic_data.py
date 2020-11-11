@@ -52,11 +52,11 @@ grid2 = np.mgrid[-1:1:10j, -1:1:10j]
 grid2 = np.reshape(grid2, (2,100)).T
 grid3 = np.mgrid[-1:1:20j, -1:1:20j]
 grid3 = np.reshape(grid3, (2,400)).T + [-1, 2.5]
-noise = np.random.standard_normal(size=(40,2))
+noise = np.random.standard_normal(size=(20,2))
 
 data = np.vstack((grid1, grid2, grid3, noise))
 
-labels = np.concatenate([np.repeat(1, 25), np.repeat(2, 100), np.repeat(3, 400), np.repeat(-1, 40)])
+labels = np.concatenate([np.repeat(1, 25), np.repeat(2, 100), np.repeat(3, 400), np.repeat(-1, 20)])
 
 # plt.scatter(data[:,0], data[:,1], c=labels)
 # plt.show()
