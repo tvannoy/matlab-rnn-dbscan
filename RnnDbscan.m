@@ -76,7 +76,7 @@ classdef RnnDbscan < handle
         ClusterDensities (1,:) double
         % Cluster labels. Outliers have a label value of -1; all other 
         % clusters have labels starting at 1
-        Labels (:,1) int32 {mustBeInteger} = []
+        Labels (:,1) int32 = []
     end
 
     methods (Access = public)
@@ -119,7 +119,7 @@ classdef RnnDbscan < handle
             end
 
             obj.Data = X;
-            obj.Labels = zeros(size(X, 1), 1);
+            obj.Labels = int32(zeros(size(X, 1), 1));
             obj.KnnIndex = knnindex(obj.Data, indexNeighbors, ...
                 'Method', options.Method);
             obj.K = k;
@@ -170,26 +170,26 @@ classdef RnnDbscan < handle
         % defined as points with a reverse nearest neighbor count >= k, which
         % corresponds to a node having an indegree >= k in the knn graph
 
-            obj.CorePoints = find(obj.KnnGraph.indegree >= obj.K);
+            obj.CorePoints = find(indegree(obj.KnnGraph) >= obj.K);
 
             % creating a subgraph renumbers the node IDs. This is problematic
             % because I am expecting the node IDs to correspond to the data
             % points' indices in the data matrix. To remedy this, the subgraph's
             % node IDs have to be converted back to the original node IDs.
-            corePointSubgraph = obj.KnnGraph.subgraph(obj.CorePoints);     
+            corePointSubgraph = subgraph(obj.KnnGraph, obj.CorePoints);     
 
             % get the initial clusters from the connected components.
             % 'OutputForm' = 'cell' returns a cell array where the i-th cell
             % contains all of the node IDs belonging to component i; this 
             % results in a cell array where each cell is a cluster.
-            clusters = corePointSubgraph.conncomp('Type', 'weak', 'OutputForm', 'cell');
+            clusters = conncomp(corePointSubgraph, 'Type', 'weak', 'OutputForm', 'cell');
 
             % convert the subgraph's node IDs back to the original node IDs that
             % correspond to the data points' indices. 
             obj.Clusters = cellfun(@(c) obj.CorePoints(c), clusters, 'UniformOutput', false);
 
             for i = 1:length(obj.Clusters)
-                obj.Labels(obj.Clusters{i}) = i;
+                obj.Labels(obj.Clusters{i}) = int32(i);
             end
         end
 
@@ -215,7 +215,7 @@ classdef RnnDbscan < handle
                     % k-nearest neighbors of a point j are the successors of 
                     % node j in the knn graph, i.e. there is an edge originating
                     % from node j 
-                    neighbors = obj.KnnGraph.successors(obj.Clusters{i}(j));
+                    neighbors = successors(obj.KnnGraph, obj.Clusters{i}(j));
 
                     % only add points to a cluster if they do not already belong
                     % to a cluster
@@ -234,7 +234,7 @@ classdef RnnDbscan < handle
                 
                 % add neighbors of core points in cluster i to cluster i
                 obj.Clusters{i} = horzcat(obj.Clusters{i}, borderPoints(:)');
-                obj.Labels(borderPoints) = i;
+                obj.Labels(borderPoints) = int32(i);
             end
         end
 
@@ -256,7 +256,7 @@ classdef RnnDbscan < handle
                 pointIsNoise = true;
 
                 % find k-nearest neighbors of the unclustered point
-                neighbors = obj.KnnGraph.successors(unclusteredPoint);
+                neighbors = successors(obj.KnnGraph, unclusteredPoint);
 
                 % determine which neighbors are core points; we do not want to
                 % cluster the unclustered point if it is not connected to any 
@@ -276,7 +276,7 @@ classdef RnnDbscan < handle
                         if distances(i) <= obj.ClusterDensities(clusterIdx)
                             % add unclustered point to cluster
                             obj.Clusters{clusterIdx} = horzcat(obj.Clusters{clusterIdx}, unclusteredPoint); 
-                            obj.Labels(unclusteredPoint) = clusterIdx;
+                            obj.Labels(unclusteredPoint) = int32(clusterIdx);
 
                             pointIsNoise = false;
 
@@ -289,7 +289,7 @@ classdef RnnDbscan < handle
                 if pointIsNoise
                     % the unclustered point does not have any neighbors that are core points, so it is considered an outlier
                     obj.Outliers = horzcat(obj.Outliers, unclusteredPoint);
-                    obj.Labels(unclusteredPoint) = -1;
+                    obj.Labels(unclusteredPoint) = int32(-1);
                 end
             end
         end
@@ -314,8 +314,8 @@ classdef RnnDbscan < handle
             for i = 1:length(obj.Clusters)
                 % find all edges between core points in the cluster
                 clusterCorePoints = intersect(obj.Clusters{i}, obj.CorePoints);
-                subgraph = obj.KnnGraph.subgraph(clusterCorePoints);
-                [sourceNodes, targetNodes] = subgraph.findedge();
+                G = subgraph(obj.KnnGraph, clusterCorePoints);
+                [sourceNodes, targetNodes] = findedge(G);
 
                 % If a cluster only has one core point, we can't compute it's
                 % density; consequently, we must check if there is an edge in
