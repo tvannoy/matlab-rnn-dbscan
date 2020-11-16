@@ -60,17 +60,17 @@ classdef RnnDbscan < matlab.mixin.Copyable
         % Input data; rows are observations, and columns are variables
         Data (:,:) double
         % k-nearest neighbor index
-        KnnIndex (:,:) double
+        KnnIndex (:,:) int32
         % Directed k-nearest neighbor graph
         KnnGraph (1,1) digraph
         % Cell array of clusters; Clusters{i} contains indices for all points
         % that are in cluster i
         Clusters (:,1) cell
         % Outliers that do not belong to any cluster
-        Outliers (1,:) double
+        Outliers (1,:) int32
         % List of core points, which are points with >= k reverse nearest
         % neighbors. 
-        CorePoints (1,:) double
+        CorePoints (1,:) int32
         % Cluster densities, defined as the max distance between 
         % connected core points
         ClusterDensities (1,:) double
@@ -170,7 +170,7 @@ classdef RnnDbscan < matlab.mixin.Copyable
         % defined as points with a reverse nearest neighbor count >= k, which
         % corresponds to a node having an indegree >= k in the knn graph
 
-            obj.CorePoints = find(indegree(obj.KnnGraph) >= obj.K);
+            obj.CorePoints = int32(find(indegree(obj.KnnGraph) >= obj.K));
 
             % creating a subgraph renumbers the node IDs. This is problematic
             % because I am expecting the node IDs to correspond to the data
@@ -215,7 +215,7 @@ classdef RnnDbscan < matlab.mixin.Copyable
                     % k-nearest neighbors of a point j are the successors of 
                     % node j in the knn graph, i.e. there is an edge originating
                     % from node j 
-                    neighbors = successors(obj.KnnGraph, obj.Clusters{i}(j));
+                    neighbors = int32(successors(obj.KnnGraph, obj.Clusters{i}(j)));
 
                     % only add points to a cluster if they do not already belong
                     % to a cluster
@@ -249,14 +249,14 @@ classdef RnnDbscan < matlab.mixin.Copyable
         % extended cluster definition are labeled as outliers.
 
             clusteredPoints = [obj.Clusters{:}];
-            pointIndices = 1:size(obj.Data, 1);
+            pointIndices = int32([1:size(obj.Data, 1)]);
             unclusteredPoints = setdiff(pointIndices, clusteredPoints);
 
             for unclusteredPoint = unclusteredPoints
                 pointIsNoise = true;
 
                 % find k-nearest neighbors of the unclustered point
-                neighbors = successors(obj.KnnGraph, unclusteredPoint);
+                neighbors = int32(successors(obj.KnnGraph, unclusteredPoint));
 
                 % determine which neighbors are core points; we do not want to
                 % cluster the unclustered point if it is not connected to any 
@@ -264,9 +264,14 @@ classdef RnnDbscan < matlab.mixin.Copyable
                 corePointNeighbors = intersect(neighbors, obj.CorePoints);
 
                 if corePointNeighbors
+		    corePointNeighborsData = obj.Data(corePointNeighbors, :);
+		    unclusteredPointData = obj.Data(unclusteredPoint, :);
+
                     % sort core point neighbors by distance from the
                     % unclustered point
-                    [distances, sortIdx] = sort(pdist2(unclusteredPoint, corePointNeighbors));
+		    distances = sqrt(bsxfun(@plus, sum(unclusteredPointData.^2), sum(corePointNeighborsData.^2,2)') ...
+		         - 2*(unclusteredPointData * corePointNeighborsData'));
+                    [distances, sortIdx] = sort(distances);
                     corePointNeighbors = corePointNeighbors(sortIdx);
 
                     for i = 1:length(corePointNeighbors)
