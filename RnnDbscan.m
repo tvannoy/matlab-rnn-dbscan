@@ -6,15 +6,35 @@ classdef RnnDbscan < handle
 %   of different densities, unlike DBSCAN.
 %
 %   RnnDbscan constructor:
-%       rnnDbscan = RnnDbscan(X, k)
+%       rnnDbscan = RnnDbscan(X, k, indexNeighbors) creates an RNN DBSCAN
+%       object for input data X, with k-nearest neighbors used in
+%       constructing the knn graph. indexNeighbors is the number of
+%       neighbors used to build the knn k-nearest neighbors index.
+%       indexNeighbors must be >= k + 1
+%
+%       rnnDbscan = RnnDbscan(X, k, indexNeighbors, 'Method', method)
+%       creates an RNN DBSCAN object for input data X, with k nearest neighbors
+%       used in constructing the knn graph, using the specified knn method.
+%
+%       Optional parameters:
+%       'Method'        - The method to use when building the knn index
+%           "knnsearch" - Use KNNSEARCH from Mathwork's Statistics and
+%                         Machine Learning Toolbox. This is the default
+%                         method. 
+%           "nndescent" - Use the nearest neighbor descent algorithm to
+%                         build an approximate knn index. For large
+%                         matrices, this is much faster than KNNSEARCH, at
+%                         the cost of slightly less accuracy. This method
+%                         requires the pynndescent python package to be
+%                         installed and accessible through MATLAB's Python
+%                         external language interface
 %
 %   Rows of X correspond to observations, and columns correspond to variables.
-%   k is the number of nearest neighbors to use when constructing the mutual 
-%   k-nearest neighbor graph.
 %
 %   RnnDbscan properties:
-%       Data              - input data X 
 %       K                 - number of nearest neighbors 
+%       Data              - input data X
+%       KnnIndex          - k-nearest neighbor index
 %       KnnGraph          - knn graph used for clustering
 %       Clusters          - Clusters{i} contains indices for points in cluster i
 %       Outliers          - array of outliers that do not belong to a cluster
@@ -28,12 +48,19 @@ classdef RnnDbscan < handle
 %   This algorithm was presented in https://dx.doi.org/10.1109/TKDE.2017.2787640,
 %   by Bryant and Cios but no implementation was given. This implementation is
 %   based on the graph-based interpretation presented in the original paper.   
+%
+%   See also KNNINDEX, KNNGRAPH
+
+    properties (SetAccess = public, AbortSet)
+        % Number of nearest neighbors used to construct the knn graph
+        K (1,1) double {mustBePositive, mustBeInteger} = 1
+    end
 
     properties (SetAccess = private)
         % Input data; rows are observations, and columns are variables
         Data (:,:) double
-        % Number of nearest neighbors used to construct the knn graph
-        K (1,1) double {mustBePositive, mustBeInteger} = 1
+        % k-nearest neighbor index
+        KnnIndex (:,:) double
         % Directed k-nearest neighbor graph
         KnnGraph (1,1) digraph
         % Cell array of clusters; Clusters{i} contains indices for all points
@@ -49,19 +76,60 @@ classdef RnnDbscan < handle
         ClusterDensities (1,:) double
         % Cluster labels. Outliers have a label value of -1; all other 
         % clusters have labels starting at 1
-        Labels (:,1) double {mustBeInteger} = []
+        Labels (:,1) int32 {mustBeInteger} = []
     end
 
     methods (Access = public)
-        function obj = RnnDbscan(X, k)
+        function obj = RnnDbscan(X, k, indexNeighbors, options)
         %RnnDbscan Construct an RNN DBSCAN object
-        %   rnnDbscan = RnnDbscan(X, k) creates an RNN DBSCAN object for input
-        %   data X, with k nearest neighbors used in constructing the knn graph.
+        %   rnnDbscan = RnnDbscan(X, k, indexNeighbors) creates an RNN DBSCAN
+        %   object for input data X, with k-nearest neighbors used in
+        %   constructing the knn graph. indexNeighbors is the number of
+        %   neighbors used to build the k-nearest neighbors index.
+        %   indexNeighbors must be >= k + 1
+        %
+        %   rnnDbscan = RnnDbscan(X, k, indexNeighbors, 'Method', method)
+        %   creates an RNN DBSCAN object for input data X, with k nearest
+        %   neighbors used in constructing the knn graph, using the specified
+        %   knn method.
+        %
+        %   Optional parameters:
+        %   'Method'        - The method to use when building the knn index
+        %       "knnsearch" - Use KNNSEARCH from Mathwork's Statistics and
+        %                     Machine Learning Toolbox. This is the default
+        %                     method. 
+        %       "nndescent" - Use the nearest neighbor descent algorithm to
+        %                     build an approximate knn index. For large
+        %                     matrices, this is much faster than KNNSEARCH, at
+        %                     the cost of slightly less accuracy. This method
+        %                     requires the pynndescent python package to be
+        %                     installed and accessible through MATLAB's Python
+        %                     external language interface
+
+        % TODO: I could add another constructor that doesn't take indexNeighbors and uses k instead
+            arguments
+                X (:,:) double
+                k (1, 1) {mustBePositive, mustBeInteger}
+                indexNeighbors (1,1) {mustBePositive, mustBeInteger}
+                options.Method (1,1) string {mustBeMember(options.Method, ["knnsearch", "nndescent"])} = "knnsearch"
+            end
+
+            if indexNeighbors < k + 1
+                error("indexNeighbors must be >= k + 1")
+            end
 
             obj.Data = X;
-            obj.K = k;
             obj.Labels = zeros(size(X, 1), 1);
-            obj.KnnGraph = knngraph(X, k);
+            obj.KnnIndex = knnindex(obj.Data, indexNeighbors, ...
+                'Method', options.Method);
+            obj.K = k;
+
+            % the setter for k won't execute for k = 1 because 1 is the
+            % default value for k, so AbortSet will stop set.K from running
+            if k == 1
+                obj.KnnGraph = knngraph(obj.KnnIndex, obj.K, ...
+                    'Precomputed', true);
+            end
         end
 
         function cluster(obj)
@@ -73,6 +141,21 @@ classdef RnnDbscan < handle
             obj.computeClusterDensities();
             obj.addDirectlyDensityRechablePoints();
             obj.createExtendedClusters();
+        end
+    end
+
+    methods
+        function obj = set.K(obj, k)
+            % this method only gets called if k != obj.K, due to AbortSet
+            if k >= size(obj.KnnIndex, 2)
+                error("Error setting property 'K' of  class 'RnnDbsan':\n" + ...
+                    "'K' must be less than knn index size %d", ...
+                    size(obj.KnnIndex, 2));
+            end
+
+            obj.K = k;
+            obj.KnnGraph = knngraph(obj.KnnIndex, obj.K, ...
+                'Precomputed', true);
         end
     end
 
