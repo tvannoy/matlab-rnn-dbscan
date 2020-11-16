@@ -1,4 +1,4 @@
-classdef RnnDbscan < handle
+classdef RnnDbscan < matlab.mixin.Copyable
 %RnnDbscan RNN DBSCAN clustering 
 %   RNN DBSCAN is a density-based clustering algorithm that uses reverse nearest
 %   neighbor counts as an estimate of observation density. It is based upon
