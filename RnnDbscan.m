@@ -1,4 +1,4 @@
-classdef RnnDbscan < matlab.mixin.Copyable
+classdef RnnDbscan < handle
 %RnnDbscan RNN DBSCAN clustering 
 %   RNN DBSCAN is a density-based clustering algorithm that uses reverse nearest
 %   neighbor counts as an estimate of observation density. It is based upon
@@ -80,15 +80,19 @@ classdef RnnDbscan < matlab.mixin.Copyable
     end
 
     methods (Access = public)
-        function obj = RnnDbscan(X, k, indexNeighbors, options)
+        function obj = RnnDbscan(X, k, index, options)
         %RnnDbscan Construct an RNN DBSCAN object
-        %   rnnDbscan = RnnDbscan(X, k, indexNeighbors) creates an RNN DBSCAN
+        %   rnnDbscan = RnnDbscan(X, k, nIndexNeighbors) creates an RNN DBSCAN
         %   object for input data X, with k-nearest neighbors used in
         %   constructing the knn graph. indexNeighbors is the number of
         %   neighbors used to build the k-nearest neighbors index.
         %   indexNeighbors must be >= k + 1
+	%
+	%   rnnDbscan = RnnDbscan(X, k, knnIndex) creates an RNN DBSCAN object
+	%   using a precomputed knn index, knnIndex. knnIndex must have the same
+	%   number of rows as X.
         %
-        %   rnnDbscan = RnnDbscan(X, k, indexNeighbors, 'Method', method)
+        %   rnnDbscan = RnnDbscan(X, k, nIndexNeighbors, 'Method', method)
         %   creates an RNN DBSCAN object for input data X, with k nearest
         %   neighbors used in constructing the knn graph, using the specified
         %   knn method.
@@ -110,18 +114,33 @@ classdef RnnDbscan < matlab.mixin.Copyable
             arguments
                 X (:,:) double
                 k (1, 1) {mustBePositive, mustBeInteger}
-                indexNeighbors (1,1) {mustBePositive, mustBeInteger}
+                index
                 options.Method (1,1) string {mustBeMember(options.Method, ["knnsearch", "nndescent"])} = "knnsearch"
             end
 
-            if indexNeighbors < k + 1
-                error("indexNeighbors must be >= k + 1")
-            end
-
             obj.Data = X;
-            obj.Labels = int32(zeros(size(X, 1), 1));
-            obj.KnnIndex = knnindex(obj.Data, indexNeighbors, ...
-                'Method', options.Method);
+
+	    if numel(index) == 1
+		indexNeighbors = index;
+
+                if indexNeighbors < k + 1
+                    error("indexNeighbors must be >= k + 1")
+                end
+
+		obj.KnnIndex = knnindex(obj.Data, indexNeighbors, ...
+		    'Method', options.Method);
+	    elseif size(index, 1) == size(X, 1)
+		if size(index, 2) < k + 1
+                    error("knnIndex must have # columns >= k + 1")
+		end
+
+		obj.KnnIndex = index;
+	    else
+		% TODO: better error message
+		error("argument 3 is incorrect")
+	    end
+
+            obj.Labels = zeros(size(X, 1), 1, 'int32');
             obj.K = k;
 
             % the setter for k won't execute for k = 1 because 1 is the
