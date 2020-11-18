@@ -201,11 +201,13 @@ classdef RnnDbscan < handle
             % 'OutputForm' = 'cell' returns a cell array where the i-th cell
             % contains all of the node IDs belonging to component i; this 
             % results in a cell array where each cell is a cluster.
-            clusters = conncomp(corePointSubgraph, 'Type', 'weak', 'OutputForm', 'cell');
+            clusters = conncomp(corePointSubgraph, 'Type', 'weak', ...      
+                'OutputForm', 'cell');
 
             % convert the subgraph's node IDs back to the original node IDs that
             % correspond to the data points' indices. 
-            obj.Clusters = cellfun(@(c) obj.CorePoints(c), clusters, 'UniformOutput', false);
+            obj.Clusters = cellfun(@(c) obj.CorePoints(c), clusters, ...
+                'UniformOutput', false);
 
             for i = 1:length(obj.Clusters)
                 obj.Labels(obj.Clusters{i}) = int32(i);
@@ -283,13 +285,13 @@ classdef RnnDbscan < handle
                 corePointNeighbors = intersect(neighbors, obj.CorePoints);
 
                 if corePointNeighbors
-		    corePointNeighborsData = obj.Data(corePointNeighbors, :);
-		    unclusteredPointData = obj.Data(unclusteredPoint, :);
+                    corePointNeighborsData = obj.Data(corePointNeighbors, :);
+                    unclusteredPointData = obj.Data(unclusteredPoint, :);
 
                     % sort core point neighbors by distance from the
                     % unclustered point
-		    distances = sqrt(bsxfun(@plus, sum(unclusteredPointData.^2), sum(corePointNeighborsData.^2,2)') ...
-		         - 2*(unclusteredPointData * corePointNeighborsData'));
+                    distances = pairwiseDist(unclusteredPointData, ...
+                        corePointNeighborsData);
                     [distances, sortIdx] = sort(distances);
                     corePointNeighbors = corePointNeighbors(sortIdx);
 
@@ -339,35 +341,41 @@ classdef RnnDbscan < handle
                 % find all edges between core points in the cluster
                 clusterCorePoints = intersect(obj.Clusters{i}, obj.CorePoints);
                 G = subgraph(obj.KnnGraph, clusterCorePoints);
-                [sourceNodes, targetNodes] = findedge(G);
-
+                [sourceNodesTmp, targetNodesTmp] = findedge(G);
+                
                 % If a cluster only has one core point, we can't compute it's
                 % density; consequently, we must check if there is an edge in
                 % the cluster before trying to compute it's density
-                if sourceNodes & targetNodes
-                    % since the subgraph renumbers the node IDs, we convert back
-                    % to the original node IDs so we can properly index into the
-                    % data matrix. The subgraph's node IDs are the indices of
-                    % the vector (clusterCorePoints) used to create the subgraph
-                    sourceNodes = clusterCorePoints(sourceNodes);
-                    targetNodes = clusterCorePoints(targetNodes);
+                if sourceNodesTmp
+                    % findedge returns a source and target node for each edge;
+                    % to reduce the number of iterations in the following for 
+                    % loop, we transform the source and target nodes such that
+                    % there is one cell of target nodes for each source node
+                    sourceNodes = unique(sourceNodesTmp);
+                    targetNodes = mat2cell(targetNodesTmp, ...
+                        histcounts(sourceNodesTmp, [sourceNodes; inf]));
+                
+                    for nodeId = 1:length(sourceNodes)
+                        % convert node IDs back to their original indices
+                        origNodeId = clusterCorePoints(nodeId);
+                        origNeighborIds = clusterCorePoints(targetNodes{nodeId});
 
-                    % get the data instances corresponding to the source and
-                    % target nodes of each edge
-                    sourcePoints = obj.Data(sourceNodes, :);
-                    targetPoints = obj.Data(targetNodes, :);
+                        distances = pairwiseDist(obj.Data(origNodeId, :), ...
+                            obj.Data(origNeighborIds, :));  
+                        maxDist = max(distances);
 
-                    % compute the euclidean distance between all pairs of core
-                    % points that have edges between them; since observations
-                    % are in rows, the third argument (DIM) of vecnorm is set to
-                    % 2 to compute the norm along rows, not columns
-                    distances = vecnorm(sourcePoints - targetPoints, 2, 2);
-
-                    obj.ClusterDensities(i) = max(distances);
+                        if maxDist > obj.ClusterDensities(i)
+                            obj.ClusterDensities(i) = maxDist;
+                        end
+                    end
                 else
                     obj.ClusterDensities(i) = nan;
                 end
             end
         end
     end
+end
+
+function d = pairwiseDist(X, Y)
+    d = sqrt(bsxfun(@plus, sum(X.^2, 2), sum(Y.^2, 2)') - 2*(X * Y'));
 end
