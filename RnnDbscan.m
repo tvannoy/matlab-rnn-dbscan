@@ -87,10 +87,10 @@ classdef RnnDbscan < handle
         %   constructing the knn graph. indexNeighbors is the number of
         %   neighbors used to build the k-nearest neighbors index.
         %   indexNeighbors must be >= k + 1
-	%
-	%   rnnDbscan = RnnDbscan(X, k, knnIndex) creates an RNN DBSCAN object
-	%   using a precomputed knn index, knnIndex. knnIndex must have the same
-	%   number of rows as X.
+        %
+        %   rnnDbscan = RnnDbscan(X, k, knnIndex) creates an RNN DBSCAN object
+        %   using a precomputed knn index, knnIndex. knnIndex must have the same
+        %   number of rows as X.
         %
         %   rnnDbscan = RnnDbscan(X, k, nIndexNeighbors, 'Method', method)
         %   creates an RNN DBSCAN object for input data X, with k nearest
@@ -120,25 +120,25 @@ classdef RnnDbscan < handle
 
             obj.Data = X;
 
-	    if numel(index) == 1
-		indexNeighbors = index;
+            if numel(index) == 1
+                indexNeighbors = index;
 
                 if indexNeighbors < k + 1
                     error("indexNeighbors must be >= k + 1")
                 end
 
-		obj.KnnIndex = knnindex(obj.Data, indexNeighbors, ...
-		    'Method', options.Method);
-	    elseif size(index, 1) == size(X, 1)
-		if size(index, 2) < k + 1
+                obj.KnnIndex = knnindex(obj.Data, indexNeighbors, ...
+                    'Method', options.Method);
+            elseif size(index, 1) == size(X, 1)
+                if size(index, 2) < k + 1
                     error("knnIndex must have # columns >= k + 1")
-		end
+                end
 
-		obj.KnnIndex = index;
-	    else
-		% TODO: better error message
-		error("argument 3 is incorrect")
-	    end
+                obj.KnnIndex = index;
+            else
+                % TODO: better error message
+                error("argument 3 is incorrect")
+            end
 
             obj.Labels = zeros(size(X, 1), 1, 'int32');
             obj.K = k;
@@ -173,8 +173,18 @@ classdef RnnDbscan < handle
             end
 
             obj.K = k;
+
+            % XXX: Mathwork's says I shouldn't set other properties in a setter
+            % method, which I do conceptually agree with, but I want to be able
+            % to "reset" the object to cluster using a different k without
+            % having to make a new object and recompute the knn index
             obj.KnnGraph = knngraph(obj.KnnIndex, obj.K, ...
                 'Precomputed', true);
+            obj.Labels = zeros(1, size(obj.Data, 1), 1, 'int32');
+            obj.Outliers = int32([]);
+            obj.CorePoints = int32([]);
+            obj.Clusters = {};
+            obj.ClusterDensities = [];
         end
     end
 
