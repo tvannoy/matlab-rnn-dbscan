@@ -51,6 +51,9 @@ classdef RnnDbscan < handle
 %
 %   See also KNNINDEX, KNNGRAPH
 
+% SPDX-License-Identifier: MIT
+% Copyright (c) 2020 Trevor Vannoy
+
     properties (SetAccess = public, AbortSet)
         % Number of nearest neighbors used to construct the knn graph
         K (1,1) double {mustBePositive, mustBeInteger} = 1
