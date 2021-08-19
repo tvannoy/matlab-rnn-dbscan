@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: 3-Clause-BSD
+# Copyright (c) 2020 Trevor Vannoy
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.io import savemat
