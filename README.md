@@ -1,4 +1,6 @@
 # matlab-rnn-dbscan
+[![View RNN DBSCAN on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://www.mathworks.com/matlabcentral/fileexchange/97924-rnn-dbscan)
+
 This repo contains a MATLAB implementation of the [RNN-DBSCAN algorithm by Bryant and Cios](https://doi.org/10.1109/TKDE.2017.2787640). This implementation is based upon the graph-based interpretation presented in their paper.
 
 
