@@ -48,3 +48,6 @@ rnndbscan.Labels
 ```
 
 For more details, see the help text: `help RnnDbscan`. `RNN-DBSCAN tests.ipynb` also contains many tests, which can be used as usage examples. 
+
+## Contributing
+All contributions are welcome! Just submit a pull request or open an issue.
