@@ -51,7 +51,7 @@ classdef RnnDbscan < handle
 %
 %   See also KNNINDEX, KNNGRAPH
 
-% SPDX-License-Identifier: 3-Clause-BSD
+% SPDX-License-Identifier: BSD-3-Clause 
 % Copyright (c) 2020 Trevor Vannoy
 
     properties (SetAccess = public, AbortSet)
