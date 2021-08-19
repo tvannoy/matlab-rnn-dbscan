@@ -12,6 +12,17 @@ To run the tests contained in the Jupyter notebook, you will need to install the
 
 To use the NN Descent algorithm to construct the KNN graph used by RNN DBSCAN, you need [pynndescent](https://github.com/lmcinnes/pynndescent) and [MATLAB's Python language interface](https://www.mathworks.com/help/matlab/call-python-libraries.html). I recommend using Conda to set up an environment, as MATLAB is picky about which Python versions it supports. 
 
+## Installation
+### Install with [mpm](https://github.com/mobeets/mpm):
+```
+mpm install knn-graphs
+mpm install matlab-rnn-dbscan
+```
+### Manual installation
+- Download [knn-graphs](https://www.mathworks.com/matlabcentral/fileexchange/97919-knn-graphs) from the MATLAB File Exchange
+- Download matlab-rnn-dbscan from the MATLAB File Exchange or from the latest GitHub release
+- Add both packages to your MATLAB path
+
 ## Usage
 `RnnDbscan` is a class with a single public method, `cluster`. The results of the clustering operation are stored in read-only public properties. 
 
