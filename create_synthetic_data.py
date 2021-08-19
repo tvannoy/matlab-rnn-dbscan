@@ -1,3 +1,4 @@
+""" Create synthetic data for tests """
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2020 Trevor Vannoy
 import matplotlib.pyplot as plt
