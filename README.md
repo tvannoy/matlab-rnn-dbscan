@@ -22,7 +22,7 @@ mpm install matlab-rnn-dbscan
 ```
 ### Manual installation
 - Download [knn-graphs](https://www.mathworks.com/matlabcentral/fileexchange/97919-knn-graphs) from the MATLAB File Exchange
-- Download matlab-rnn-dbscan from the [MATLAB File Exchange](https://www.mathworks.com/matlabcentral/fileexchange/97924-rnn-dbscan) or from the latest [GitHub release](https://github.com/tvannoy/matlab-rnn-dbscan/archive/refs/tags/v1.1.zip)
+- Download matlab-rnn-dbscan from the [MATLAB File Exchange](https://www.mathworks.com/matlabcentral/fileexchange/97924-rnn-dbscan) or from the latest [GitHub release](https://github.com/tvannoy/matlab-rnn-dbscan/archive/refs/tags/v1.0.1.zip)
 - Add both packages to your MATLAB path
 
 ## Usage
