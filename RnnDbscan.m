@@ -49,7 +49,7 @@ classdef RnnDbscan < handle
 %   by Bryant and Cios but no implementation was given. This implementation is
 %   based on the graph-based interpretation presented in the original paper.   
 %
-%   See also KNNINDEX, KNNGRAPH
+%   See also knnindex, knngraph
 
 % SPDX-License-Identifier: BSD-3-Clause 
 % Copyright (c) 2020 Trevor Vannoy
