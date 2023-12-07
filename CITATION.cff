@@ -6,6 +6,6 @@ authors:
   orcid: "https://orcid.org/0000-0003-4034-9963"
 title: "matlab-rnn-dbscan"
 version: 1.0.3
-doi: 10.5281/zenodo.10119018
+doi: 10.5281/zenodo.10119016
 date-released: 2023-12-6
 url: "https://github.com/tvannoy/matlab-rnn-dbscan"
