@@ -12,8 +12,6 @@ RNN DBSCAN is a density-based clustering algorithm that uses reverse nearest nei
 - My [knn-graphs](https://github.com/tvannoy/knn-graphs) MATLAB library
 - Statistics and Machine Learning Toolbox
 
-To run the tests contained in the Jupyter notebook, you will need to install the Jupyter [matlab kernel](https://github.com/calysto/matlab_kernel).
-
 To use the NN Descent algorithm to construct the KNN graph used by RNN DBSCAN, you need [pynndescent](https://github.com/lmcinnes/pynndescent) and [MATLAB's Python language interface](https://www.mathworks.com/help/matlab/call-python-libraries.html). I recommend using Conda to set up an environment, as MATLAB is picky about which Python versions it supports. 
 
 ## Installation
